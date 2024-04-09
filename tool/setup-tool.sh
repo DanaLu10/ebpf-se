@@ -166,7 +166,7 @@ source_install_z3()
 	if  [ ! -f "build/z3" ] || [ ! "z3-$(build/z3 --version | cut -f3 -d' ')" = "$Z3_RELEASE" ];	then
 		python3 scripts/mk_make.py -p "$BUILDDIR/z3/build"
 		cd build
-		make -kj || make
+		make -j5 || make
 		make install
 	fi
 }
@@ -206,7 +206,7 @@ source_install_klee_uclibc()
 		--with-cc="/usr/bin/clang-$LLVM_RELEASE"
 
 	cp "$BUILDDIR/klee-uclibc.config" '.config'
-	make -kj
+	make -j5
 }
 
 clean_klee_uclibc()
@@ -252,7 +252,7 @@ source_install_klee()
 								-DENABLE_DOXYGEN=ON \
 								..
 
-		make -kj $(nproc)
+		make -j5 $(nproc)
 	popd
 }
 
