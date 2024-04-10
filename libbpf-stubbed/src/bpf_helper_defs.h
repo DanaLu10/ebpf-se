@@ -44,6 +44,12 @@ struct bpf_dynptr;
 struct iphdr;
 struct ipv6hdr;
 
+enum map_access {
+  MAP_READ_ONLY,
+  MAP_READ_WRITE,
+  MAP_WRITE_ONLY
+};
+
 /*
  * Helper structure used by eBPF C program
  * to describe BPF map attributes to libbpf loader
@@ -55,6 +61,7 @@ struct bpf_map_def {
   unsigned int max_entries;
   unsigned int map_flags;
   unsigned int map_id;
+  enum map_access kern_access_permissions;
 };
 
 #if (defined USES_BPF_MAPS) && (defined KLEE_VERIFICATION)
@@ -156,12 +163,15 @@ void bpf_map_reset_stub(struct bpf_map_def* map) {
  */
 
 #ifdef USES_BPF_MAP_LOOKUP_ELEM
+#define HAS_LOOKUP_ACCESS(access) (!access || access == MAP_READ_ONLY || access == MAP_READ_WRITE)
+
 static __attribute__ ((noinline)) void *bpf_map_lookup_elem(void *map, const void *key) {
   // if(record_calls){
   //   klee_trace_ret_just_ptr(sizeof(void*));
   //   klee_add_bpf_call();
   // }
   struct bpf_map_def *map_ptr = ((struct bpf_map_def *)map);
+  klee_assert(HAS_LOOKUP_ACCESS(map_ptr->kern_access_permissions));
   // TRACE_VAL((uint32_t)(map_ptr), "map", _u32)
   // TRACE_VAR(map_ptr->type, "bpf_map_type");
   if (bpf_map_stub_types[map_ptr->map_id] == ArrayStub)
@@ -200,6 +210,8 @@ static void *(*bpf_map_lookup_elem)(void *map, const void *key) = (void *) 1;
  */
 
 #ifdef USES_BPF_MAP_UPDATE_ELEM
+#define HAS_UPDATE_ACCESS(access) (!access || access == MAP_WRITE_ONLY || access == MAP_READ_WRITE)
+
 static __attribute__ ((noinline)) long bpf_map_update_elem(void *map, const void *key, const void *value,
                                 __u64 flags) {
   // if(record_calls){
@@ -207,6 +219,7 @@ static __attribute__ ((noinline)) long bpf_map_update_elem(void *map, const void
   //   klee_add_bpf_call();
   // }
   struct bpf_map_def *map_ptr = ((struct bpf_map_def *)map);
+  klee_assert(HAS_UPDATE_ACCESS(map_ptr->kern_access_permissions));
   // TRACE_VAL((uint32_t)(map_ptr), "map", _u32)
   // TRACE_VAR(map_ptr->type, "bpf_map_type");
   if (bpf_map_stub_types[map_ptr->map_id] == ArrayStub)
@@ -230,8 +243,10 @@ static long (*bpf_map_update_elem)(void *map, const void *key,
  * 	0 on success, or a negative error in case of failure.
  */
 #ifdef USES_BPF_MAP_DELETE_ELEM
+#define HAS_DELETE_ACCESS(access) (!access || access == MAP_WRITE_ONLY || access == MAP_READ_WRITE)
 static __attribute__ ((noinline)) long bpf_map_delete_elem(void *map, const void *key) {
   struct bpf_map_def *map_ptr = ((struct bpf_map_def *)map);
+  klee_assert(HAS_DELETE_ACCESS(map_ptr->kern_access_permissions));
   // TRACE_VAL((uint32_t)(map_ptr), "map", _u32)
   // TRACE_VAR(map_ptr->type, "bpf_map_type");
   if (bpf_map_stub_types[map_ptr->map_id] == MapStub)

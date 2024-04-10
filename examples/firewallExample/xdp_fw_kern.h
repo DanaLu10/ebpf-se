@@ -12,6 +12,7 @@ struct bpf_map_def SEC("maps") blacklist = {
 	.key_size = sizeof(__u32),
 	.value_size = sizeof(__u64),
 	.max_entries = 20,
+  .kern_access_permissions = MAP_READ_ONLY,
 };
 
 struct __attribute__((__packed__)) pkt {
