@@ -111,7 +111,7 @@ package_sync()
 usage()
 {
 	cat <<- EOF
-	Usage: $0 [-p <dir>] [-i <component>] [-c <component>]
+	Usage: $0 [-p <dir>] [-i <component>] [-c <component>] [-k <klee_type>]
 	       $0 -h
 	
 	       When invoked with no options, $0 downloads and configures all
@@ -125,6 +125,10 @@ usage()
 	       obtain the correct working environment.
 
 	       Components: dpdk, pin, z3, klee-uclibc, klee
+
+				 The -m option specifies the repository of Klee to use, by default, it is 
+				 the original Klee/klee. The other option is funcVer, which uses the forked
+				 version of Klee for functional verification
 	EOF
 }
 
@@ -148,6 +152,8 @@ INSTALL_KLEE_UCLIBC=
 
 CLEAN_KLEE=
 INSTALL_KLEE=
+
+FUNC_VER=false
 
 ## Clean and installation routines
 
@@ -215,6 +221,59 @@ clean_klee_uclibc()
 	rm -rf klee-uclibc
 }
 
+source_install_klee_func_ver()
+{
+	line "$PATHSFILE" 'KLEE_INCLUDE' "$BUILDDIR/klee/include"
+	line_multi "$PATHSFILE" 'PATH' "$BUILDDIR/klee/build/bin:\$PATH"
+	. "$PATHSFILE"
+
+	cd "$BUILDDIR"
+	if [ -d 'klee/.git' ];
+	then
+		cd klee
+		KLEE_REPO=$(git config --get remote.origin.url)
+		if [[ "$KLEE_REPO" =~ "DanaLu10/klee" ]]; 
+		then
+			echo "Updating from Dana's Forked version of Klee"
+			git fetch && git checkout "$KLEE_RELEASE"
+		else
+			echo "Removing the Klee directory and recloning..."
+			cd "$BUILDDIR"
+			rm -rf klee
+			echo "Cloning Dana's Forked version of Klee"
+			git clone https://github.com/DanaLu10/klee
+			cd klee
+			git checkout "$KLEE_RELEASE" 
+		fi
+	else
+		git clone https://github.com/DanaLu10/klee
+		cd klee
+		git checkout "$KLEE_RELEASE"
+	fi
+
+	[ -d "build" ] || mkdir "build"
+	pushd "build"
+		[ -f "Makefile" ] || CMAKE_PREFIX_PATH="$BUILDDIR/z3/build" \
+								CMAKE_INCLUDE_PATH="$BUILDDIR/z3/build/include/" \
+								cmake \
+								-DENABLE_UNIT_TESTS=OFF \
+								-DENABLE_SYSTEM_TESTS=OFF \
+								-DBUILD_SHARED_LIBS=OFF \
+								-DLLVM_CONFIG_BINARY="/usr/bin/llvm-config-$LLVM_RELEASE" \
+								-DLLVMCC="/usr/bin/clang-$LLVM_RELEASE" \
+								-DLLVMCXX="/usr/bin/clang++-$LLVM_RELEASE" \
+								-DENABLE_SOLVER_Z3=ON \
+								-DENABLE_KLEE_UCLIBC=ON \
+								-DKLEE_UCLIBC_PATH="$BUILDDIR/klee-uclibc" \
+								-DENABLE_POSIX_RUNTIME=ON \
+								-DCMAKE_BUILD_TYPE=Debug \
+								-DENABLE_KLEE_ASSERTS=ON \
+								-DENABLE_DOXYGEN=ON \
+								..
+		make -j$(nproc)
+	popd
+}
+
 source_install_klee()
 {
 	line "$PATHSFILE" 'KLEE_INCLUDE' "$BUILDDIR/klee/include"
@@ -252,7 +311,7 @@ source_install_klee()
 								-DENABLE_DOXYGEN=ON \
 								..
 
-		make -j5 $(nproc)
+		make -j$(nproc)
 	popd
 }
 
@@ -317,6 +376,16 @@ do
 			;;
 		esac
 		;;
+	'k')
+		case "${OPTARG}" in 
+		'funcVer')
+			FUNC_VER=true
+			;;
+		'*')
+			FUNC_VER=false
+			;;
+		esac 
+		;;
 	'*')
 		usage;
 		exit 1;
@@ -363,4 +432,9 @@ package_install \
 { [ -n "$INSTALL_ALL" ] || [ -n "$INSTALL_Z3" ]   ; } && source_install_z3
 { [ -n "$INSTALL_ALL" ] || [ -n "$INSTALL_LLVM" ] ; } && bin_install_llvm
 { [ -n "$INSTALL_ALL" ] || [ -n "$INSTALL_KLEE_UCLIBC" ] ; } && source_install_klee_uclibc
-{ [ -n "$INSTALL_ALL" ] || [ -n "$INSTALL_KLEE" ] ; } && source_install_klee
+if [ $FUNC_VER ]; 
+then
+	{ [ -n "$INSTALL_ALL" ] || [ -n "$INSTALL_KLEE" ] ; } && source_install_klee_func_ver
+else 
+	{ [ -n "$INSTALL_ALL" ] || [ -n "$INSTALL_KLEE" ] ; } && source_install_klee
+fi
