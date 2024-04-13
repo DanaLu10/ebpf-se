@@ -14,7 +14,7 @@ if [ -z ${PROMPT_COMMAND+x} ]; then
   export PROMPT_COMMAND=''
 fi
 
-KLEE_RELEASE='v3.1'
+KLEE_RELEASE='41beb7b'
 KLEE_UCLIBC_RELEASE='klee_uclibc_v1.3'
 LLVM_RELEASE=13
 Z3_RELEASE='z3-4.8.15'
@@ -126,7 +126,7 @@ usage()
 
 	       Components: dpdk, pin, z3, klee-uclibc, klee
 
-				 The -m option specifies the repository of Klee to use, by default, it is 
+				 The -k option specifies the repository of Klee to use, by default, it is 
 				 the original Klee/klee. The other option is funcVer, which uses the forked
 				 version of Klee for functional verification
 	EOF
@@ -172,7 +172,7 @@ source_install_z3()
 	if  [ ! -f "build/z3" ] || [ ! "z3-$(build/z3 --version | cut -f3 -d' ')" = "$Z3_RELEASE" ];	then
 		python3 scripts/mk_make.py -p "$BUILDDIR/z3/build"
 		cd build
-		make -j5 || make
+		make -j$(nproc) || make
 		make install
 	fi
 }
@@ -212,7 +212,7 @@ source_install_klee_uclibc()
 		--with-cc="/usr/bin/clang-$LLVM_RELEASE"
 
 	cp "$BUILDDIR/klee-uclibc.config" '.config'
-	make -j5
+	make -j$(nproc)
 }
 
 clean_klee_uclibc()
@@ -335,7 +335,7 @@ clean_klee()
 }
 
 # Options
-while getopts "hp:i:c:" o;
+while getopts "hp:i:c:k:" o;
 do
 	case "${o}" in
 	'h')
