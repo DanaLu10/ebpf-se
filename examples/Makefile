@@ -3,7 +3,7 @@ LIBBPF_DIR:=$(ROOT_DIR)/../../libbpf-stubbed/src
 COMMON_DIR:=$(ROOT_DIR)/../common
 PIX_DIR:= $(ROOT_DIR)/../..
 
-LLVM_RELEASE=12
+LLVM_RELEASE=13
 LLC=llc-$(LLVM_RELEASE)
 CLANG=clang-$(LLVM_RELEASE)
 CC := gcc
@@ -78,6 +78,28 @@ libbpf:
 	cd $(LIBBPF_DIR) && bash build.sh
 
 symbex:
+	/usr/bin/time -v \
+		klee -kdalloc -kdalloc-heap-start-address=0x00040000000 -kdalloc-heap-size=1 -libc=uclibc --external-calls=all --disable-verify \
+		-solver-backend=z3 --exit-on-error -max-memory=750000 -search=dfs $(XDP_TARGETS).bc
+
+verify: $(XDP_C) Makefile $(KERN_USER_H) $(EXTRA_DEPS)
+	$(CLANG) \
+		-target bpf \
+		-DKLEE_VERIFICATION\
+		$(BPF_CFLAGS) \
+		-I $(KLEE_INCLUDE) \
+		-D__USE_VMLINUX__ \
+		-D__TARGET_ARCH_x86 \
+		-DBPF_NO_PRESERVE_ACCESS_INDEX \
+		-Wall \
+		-Wno-unused-value \
+		-Wno-unused-variable \
+		-Wno-pointer-sign \
+		-Wno-compare-distinct-pointer-types \
+		-Werror \
+		-fno-builtin \
+		-O0 -emit-llvm -c -g $(XDP_C)
+	# $(LLC) -march=bpf -filetype=obj -o $@ ${@:.o=.ll}
 	/usr/bin/time -v \
 		klee -kdalloc -kdalloc-heap-start-address=0x00040000000 -kdalloc-heap-size=1 -libc=uclibc --external-calls=all --disable-verify \
 		-solver-backend=z3 --exit-on-error -max-memory=750000 -search=dfs $(XDP_TARGETS).bc

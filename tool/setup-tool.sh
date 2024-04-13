@@ -14,9 +14,9 @@ if [ -z ${PROMPT_COMMAND+x} ]; then
   export PROMPT_COMMAND=''
 fi
 
-KLEE_RELEASE='v3.0'
+KLEE_RELEASE='v3.1'
 KLEE_UCLIBC_RELEASE='klee_uclibc_v1.3'
-LLVM_RELEASE=12
+LLVM_RELEASE=13
 Z3_RELEASE='z3-4.8.15'
 
 ## Utility functions
@@ -284,7 +284,20 @@ source_install_klee()
 	if [ -d 'klee/.git' ];
 	then
 		cd klee
-		git fetch && git checkout "$KLEE_RELEASE"
+		KLEE_REPO=$(git config --get remote.origin.url)
+		if [[ ! "$KLEE_REPO" =~ "DanaLu10/klee" ]]; 
+		then
+			echo "Updating from Klee/klee"
+			git fetch && git checkout "$KLEE_RELEASE"
+		else
+			echo "Removing the Klee directory and recloning..."
+			cd "$BUILDDIR"
+			rm -rf klee
+			echo "Cloning Klee/klee..."
+			git clone https://github.com/klee/klee.git
+			cd klee
+			git checkout "$KLEE_RELEASE" 
+		fi
 	else
 		git clone https://github.com/klee/klee.git
 		cd klee
@@ -432,9 +445,11 @@ package_install \
 { [ -n "$INSTALL_ALL" ] || [ -n "$INSTALL_Z3" ]   ; } && source_install_z3
 { [ -n "$INSTALL_ALL" ] || [ -n "$INSTALL_LLVM" ] ; } && bin_install_llvm
 { [ -n "$INSTALL_ALL" ] || [ -n "$INSTALL_KLEE_UCLIBC" ] ; } && source_install_klee_uclibc
-if [ $FUNC_VER ]; 
+if [ "$FUNC_VER" = true ]; 
 then
+	echo "Installing Klee for functional verification"
 	{ [ -n "$INSTALL_ALL" ] || [ -n "$INSTALL_KLEE" ] ; } && source_install_klee_func_ver
 else 
+	echo "Installing Klee"
 	{ [ -n "$INSTALL_ALL" ] || [ -n "$INSTALL_KLEE" ] ; } && source_install_klee
 fi
