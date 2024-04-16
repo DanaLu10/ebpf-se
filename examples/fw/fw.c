@@ -30,6 +30,7 @@ struct __attribute__((__packed__)) pkt {
 int main(int argc, char** argv){
   BPF_MAP_INIT(&tx_port, "tx_devices_map", "", "tx_device");
   BPF_MAP_INIT(&flow_ctx_table, "flowtable", "pkt.flow", "output_port");
+  addDependency(&tx_port, &flow_ctx_table);
 
   /* Init from xdp_fw_user.c */
   #define num_ports 2

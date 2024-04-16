@@ -14,7 +14,7 @@ if [ -z ${PROMPT_COMMAND+x} ]; then
   export PROMPT_COMMAND=''
 fi
 
-KLEE_RELEASE='41beb7b'
+KLEE_RELEASE='3c4518b'
 KLEE_UCLIBC_RELEASE='klee_uclibc_v1.3'
 LLVM_RELEASE=13
 Z3_RELEASE='z3-4.8.15'

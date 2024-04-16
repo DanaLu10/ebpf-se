@@ -97,9 +97,11 @@ verify: $(XDP_C) Makefile $(KERN_USER_H) $(EXTRA_DEPS)
 		-Wno-pointer-sign \
 		-Wno-compare-distinct-pointer-types \
 		-Werror \
+		-fno-discard-value-names \
 		-fno-builtin \
 		-O0 -emit-llvm -c -g $(XDP_C)
 	# $(LLC) -march=bpf -filetype=obj -o $@ ${@:.o=.ll}
+	llvm-dis -show-annotations $(XDP_TARGETS).bc
 	/usr/bin/time -v \
 		klee -kdalloc -kdalloc-heap-start-address=0x00040000000 -kdalloc-heap-size=1 -libc=uclibc --external-calls=all --disable-verify \
 		-solver-backend=z3 --exit-on-error -max-memory=750000 -search=dfs -read-set=true -write-set=true $(XDP_TARGETS).bc

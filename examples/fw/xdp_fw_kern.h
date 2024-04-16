@@ -11,6 +11,7 @@
 
 #include "../common/parsing_helpers.h"
 #include "../common/debug_tags.h"
+#include "../../verification/verify.h"
 
 #include "xdp_fw_common.h"
 
@@ -131,7 +132,7 @@ int xdp_fw_prog(struct xdp_md *ctx)
 
 	biflow(&flow_key);
 
-	if (ingress_ifindex == B_PORT){
+	if (ingress_ifindex == B_PORT) {
 		flow_leaf = bpf_map_lookup_elem(&flow_ctx_table, &flow_key);
 			
 		if (flow_leaf)
