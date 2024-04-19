@@ -14,7 +14,8 @@ if [ -z ${PROMPT_COMMAND+x} ]; then
   export PROMPT_COMMAND=''
 fi
 
-KLEE_RELEASE='3c4518b'
+KLEE_RELEASE='v3.0'
+KLEE_VERIFICATION_RELEASE='8d34349'
 KLEE_UCLIBC_RELEASE='klee_uclibc_v1.3'
 LLVM_RELEASE=13
 Z3_RELEASE='z3-4.8.15'
@@ -235,7 +236,7 @@ source_install_klee_func_ver()
 		if [[ "$KLEE_REPO" =~ "DanaLu10/klee" ]]; 
 		then
 			echo "Updating from Dana's Forked version of Klee"
-			git fetch && git checkout "$KLEE_RELEASE"
+			git stash && git fetch && git checkout "$KLEE_VERIFICATION_RELEASE"
 		else
 			echo "Removing the Klee directory and recloning..."
 			cd "$BUILDDIR"
@@ -243,14 +244,13 @@ source_install_klee_func_ver()
 			echo "Cloning Dana's Forked version of Klee"
 			git clone https://github.com/DanaLu10/klee
 			cd klee
-			git checkout "$KLEE_RELEASE" 
+			git checkout "$KLEE_VERIFICATION_RELEASE" 
 		fi
 	else
 		git clone https://github.com/DanaLu10/klee
 		cd klee
-		git checkout "$KLEE_RELEASE"
+		git checkout "$KLEE_VERIFICATION_RELEASE"
 	fi
-
 	[ -d "build" ] || mkdir "build"
 	pushd "build"
 		[ -f "Makefile" ] || CMAKE_PREFIX_PATH="$BUILDDIR/z3/build" \
