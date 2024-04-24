@@ -1,5 +1,6 @@
 from argparse import ArgumentParser
 import os
+import re
 
 
 def parseArguments():
@@ -36,8 +37,79 @@ def readInFiles(path):
   return result
 
 
+def getMaps(set1):
+  maps = {}
+  for elem in set1:
+    if elem.startswith("map:"):
+      map = elem.split("map:", 1)[1]
+      mapName = map.split('.')[0]
+      key = map.split('.')[1]
+      if mapName in maps:
+        maps[mapName].append(key)
+      else:
+        maps[mapName] = [key]
+  return maps
+
+
+def getByteValues(key):
+  byteValues = []
+  
+  values = re.split(r'b[0-9]+\(', key)[1:]
+  byteValues = [ v[:-2] for v in values ]
+
+  return byteValues
+
+
 def determineOverlap(set1, set2):
-  return set(set1) & set(set2)
+  '''
+    Given two sets, determine the overlap of the two sets
+    This treats maps specially, considering each byte of the key to the map,
+    which may be symbolic.
+  '''
+  set1 = set(set1)
+  set2 = set(set2)
+  intersection = set1 & set2
+  maps1 = getMaps(set1.difference(intersection))
+  maps2 = getMaps(set2.difference(intersection))
+  intersectingMaps = set(maps1.keys()) & set(maps2.keys())
+  if (len(intersectingMaps) == 0):
+    # No map was accessed by both programs
+    # Hence we can just return the intersection
+    return intersection
+  
+  # There were maps accessed by both programs
+  # determine the keys to the maps that were accessed by both and find any
+  # overlap, taking into account some bytes may be symbolic
+  for intersectingMap in intersectingMaps:
+    keys1 = maps1[intersectingMap]
+    keys2 = maps2[intersectingMap]
+    keys1InBytes = [ getByteValues(key) for key in keys1 ]
+    keys2InBytes = [ getByteValues(key) for key in keys2 ]
+
+    # if all of the bytes are concrete in both maps we can directly return
+    # since there was no match earlier
+
+    for i in range(len(keys1InBytes)):
+      for j in range(len(keys2InBytes)):
+        currKeys1 = keys1InBytes[i]
+        currKeys2 = keys2InBytes[j]
+        assert(len(currKeys1) == len(currKeys2))
+        same = True
+
+        for k in range(len(currKeys1)):
+          # If both bytes are concrete and not equal, then the keys are different
+          if (currKeys1[k] != "sym" and 
+              currKeys2[k] != "sym" and 
+              currKeys1[k] != currKeys2[k]):
+            same = False
+            break
+          # If at least one of the bytes is symbolic, or the concrete values are the same
+          # then they could be equivalent
+
+        if (same):
+          # these keys could be the same, since there are symbolic bytes
+          intersection.add(intersectingMap + "." + keys1[i])
+  return intersection        
 
 
 def readWriteSetAnalysis(program1Sets, program2Sets):
@@ -48,22 +120,23 @@ def readWriteSetAnalysis(program1Sets, program2Sets):
 
   foundOverlap = False
   r1w2 = determineOverlap(readSet1, writeSet2)
-  print(f"readset of 1 {readSet1}, writeset of 2 {writeSet2}")
+  # print(f"readset of 1 {readSet1}, writeset of 2 {writeSet2}")
   if r1w2:
     foundOverlap = True
-    print("Overlap in read set of first program and write set of second program")
+    print("The variables that the first program reads and the second program writes overlap")
     print(f"These elements overlap: {r1w2}")
 
-  r2w1 = determineOverlap(readSet2, writeSet1)
+  # print(f"writeset of 1 {writeSet1}, readset of 2 {readSet2}")
+  r2w1 = determineOverlap(writeSet1, readSet2)
   if r2w1:
     foundOverlap = True
-    print("Overlap in read set of second program and write set of first program")
+    print("The variables that the first program writes and the second program reads overlap")
     print(f"These elements overlap: {r2w1}")
   
   w1w2 = determineOverlap(writeSet1, writeSet2)
   if w1w2:
     foundOverlap = True
-    print("Overlap in write set of first program and write set of second program")
+    print("The variables that the first program writes and the second program writes overlap")
     print(f"These elements overlap: {w1w2}")
   
   if not foundOverlap:
