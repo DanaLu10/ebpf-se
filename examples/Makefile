@@ -1,7 +1,9 @@
 ROOT_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
-LIBBPF_DIR:=$(ROOT_DIR)/../../libbpf-stubbed/src
-COMMON_DIR:=$(ROOT_DIR)/../common
-PIX_DIR:= $(ROOT_DIR)/../..
+mkfile_path := $(abspath $(lastword $(MAKEFILE_LIST)))
+current_dir := $(shell dirname $(mkfile_path))
+LIBBPF_DIR:=$(current_dir)/../libbpf-stubbed/src
+COMMON_DIR:=$(current_dir)/common
+PIX_DIR:= $(current_dir)/..
 
 LLVM_RELEASE=13
 LLC=llc-$(LLVM_RELEASE)
@@ -27,7 +29,7 @@ KERN_USER_H ?= $(wildcard common_kern_user.h)
 
 LDFLAGS ?= -L$(LIBBPF_DIR)
 
-BPF_CFLAGS ?= -I$(LIBBPF_DIR)/build/usr/include/ -I$(ROOT_DIR)/../headers/
+BPF_CFLAGS ?= -I$(LIBBPF_DIR)/build/usr/include/ -I$(current_dir)/../headers/
 BPF_CFLAGS += -I /usr/include/$(UNAME_P)-linux-gnu
 
 ifeq ($(REPLAY), 1)
@@ -104,4 +106,4 @@ verify: $(XDP_C) Makefile $(KERN_USER_H) $(EXTRA_DEPS)
 	llvm-dis -show-annotations $(XDP_TARGETS).bc
 	/usr/bin/time -v \
 		klee -kdalloc -kdalloc-heap-start-address=0x00040000000 -kdalloc-heap-size=1 -libc=uclibc --external-calls=all --disable-verify \
-		-solver-backend=z3 --exit-on-error -max-memory=750000 -search=dfs -read-set=true -write-set=true $(XDP_TARGETS).bc
+		-solver-backend=z3 --exit-on-error -max-memory=750000 -search=dfs -single-object-resolution=true -read-set=true -write-set=true -map-correlation=true $(XDP_TARGETS).bc

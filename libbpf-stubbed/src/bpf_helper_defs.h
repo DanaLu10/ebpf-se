@@ -62,8 +62,6 @@ struct bpf_map_def {
   unsigned int map_flags;
   unsigned int map_id;
   enum map_access kern_access_permissions;
-  void *dependent_on; // The map this map is dependent on; NULL if not any
-  void *head_to;      // A map that depends on this map; NULL if not any
 };
 
 #if (defined USES_BPF_MAPS) && (defined KLEE_VERIFICATION)

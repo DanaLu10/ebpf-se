@@ -38,3 +38,7 @@ klee-last
 _build
 tags
 paths.sh
+*.out
+examples/branchOnMapExample/
+examples/mapDependencyExample/
+examples/natExample/
