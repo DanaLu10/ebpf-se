@@ -20,6 +20,8 @@ def readInFiles(path):
     lines = fp.readlines()
   
   for line in lines:
+    if line.isspace():
+      continue
     vars = line.split(', ')
     temp = []
     for var in vars:
@@ -51,13 +53,36 @@ def getMaps(set1):
   return maps
 
 
-def getByteValues(key):
+def getByteValues(key, lastByteNum):
+  # concrete key values are all integer and don't contain byte numbers
+  if "b0" not in key:
+    return getConcreteBytes(key, lastByteNum)
   byteValues = []
   
   values = re.split(r'b[0-9]+\(', key)[1:]
   byteValues = [ v[:-2] for v in values ]
 
   return byteValues
+
+def getConcreteBytes(key, lastByteNum):
+  hexValue = hex(int(key))[2:]
+  bytes = []
+  byteNum = 0
+  for b in range(len(hexValue)-2, -1, -2):
+    byte = "0x" + hexValue[b:b+2]
+    byteVal = int(byte, 0)
+    bytes.append(f"{byteVal}")
+    byteNum += 1
+
+  for b in range(byteNum, lastByteNum + 1):
+    bytes.append(f"{0}")
+  return bytes
+
+def getLastByteNum(key):
+  pos = key.rfind('b')
+  lastIndex = key.rfind('(')
+  keySize = int(key[pos+1:lastIndex])
+  return keySize
 
 
 def determineOverlap(set1, set2):
@@ -83,11 +108,19 @@ def determineOverlap(set1, set2):
   for intersectingMap in intersectingMaps:
     keys1 = maps1[intersectingMap]
     keys2 = maps2[intersectingMap]
-    keys1InBytes = [ getByteValues(key) for key in keys1 ]
-    keys2InBytes = [ getByteValues(key) for key in keys2 ]
+    # determine the size of key to the map in number of bytes
+    symbolicKeys = [ key for key in keys1 + keys2 if "b0" in key ]
 
-    # if all of the bytes are concrete in both maps we can directly return
+    # if all the bytes of keys are concrete in both maps we can directly return
     # since there was no match earlier
+    if not symbolicKeys:
+      return intersection
+    
+    # Get the last byte number (number of bytes - 1)
+    lastByteNum = getLastByteNum(symbolicKeys[0])
+    
+    keys1InBytes = [ getByteValues(key, lastByteNum) for key in keys1 ]
+    keys2InBytes = [ getByteValues(key, lastByteNum) for key in keys2 ]
 
     for i in range(len(keys1InBytes)):
       for j in range(len(keys2InBytes)):
