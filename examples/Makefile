@@ -106,7 +106,7 @@ verify: $(XDP_C) Makefile $(KERN_USER_H) $(EXTRA_DEPS)
 	llvm-dis -show-annotations $(XDP_TARGETS).bc
 	/usr/bin/time -v \
 		klee -kdalloc -kdalloc-heap-start-address=0x00040000000 -kdalloc-heap-size=1 -libc=uclibc --external-calls=all --disable-verify \
-		-solver-backend=z3 --exit-on-error -max-memory=750000 -search=dfs -single-object-resolution=true -read-set=true -write-set=true -map-correlation=true $(XDP_TARGETS).bc
+		-solver-backend=z3 -silent-klee-assume=true --exit-on-error -max-memory=750000 -search=dfs -single-object-resolution=true -read-set=true -write-set=true -map-correlation=true $(XDP_TARGETS).bc
 
 verify-two-phase: $(XDP_C) Makefile $(KERN_USER_H) $(EXTRA_DEPS)
 	$(CLANG) \
