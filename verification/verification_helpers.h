@@ -9,15 +9,15 @@ void __separate() {
   // do nothing. This function is used as a separator for running two programs
 }
 
-void klee_assume_map_contains_key(struct bpf_map_def *map, const void *key) {
+void assume_map_contains_key(struct bpf_map_def *map, const void *key) {
   klee_assume(bpf_map_lookup_elem(map, key) != NULL);
 }
 
-void klee_assume_map_does_not_contain_key(struct bpf_map_def *map, const void *key) {
+void assume_map_does_not_contain_key(struct bpf_map_def *map, const void *key) {
   klee_assume(bpf_map_lookup_elem(map, key) == NULL);
 }
 
-void klee_assume_map_contents(struct bpf_map_def *map, const void *key, const void *value) {
+void assume_map_contents(struct bpf_map_def *map, const void *key, const void *value) {
   unsigned int value_size = map->value_size;
   void *v = bpf_map_lookup_elem(map, key);
   klee_assume(v && memcmp(v, value, value_size) == 0);
