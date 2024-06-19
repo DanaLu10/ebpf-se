@@ -19,11 +19,11 @@ for d in $(find . -mindepth 1 -maxdepth 1 -type d) ; do
   elif [[ $d == ./fwTest* ]] ;
   then
     echo "running two comparison for $d"
-    cd "$d" && make verify > /dev/null 2>&1 && cmp --silent expected klee-last/verification || echo -e "${RED}Verification files are different for $d${NC}"; 
+    cd "$d" && make verify > /dev/null 2>&1 && cmp --silent expected klee-last/readWriteInformation || echo -e "${RED}Verification files are different for $d${NC}"; 
     cmp --silent expectedMapCorrelation klee-last/mapCorrelation || echo -e "${RED}Map Correlation files are different for $d${NC}"; 
   else
     echo "running normal for $d"
-    cd "$d" && make verify > /dev/null 2>&1 && cmp --silent expected klee-last/verification || echo -e "${RED}files are different for $d${NC}"; 
+    cd "$d" && make verify > /dev/null 2>&1 && cmp --silent expected klee-last/readWriteInformation || echo -e "${RED}files are different for $d${NC}"; 
   fi
   cd ../
 done
